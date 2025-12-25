@@ -323,7 +323,7 @@ class Timer {
                     type: 'recovery',
                     name: 'Walk',
                     interval: i + 1,
-                    totalIntervals: intervals,
+                    totalIntervals: intervals - 1,
                     duration: recovery,
                     isHighIntensity: false
                 });
