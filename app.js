@@ -365,6 +365,10 @@ class Timer {
 
         this.showPanel('timer');
         this.updateDisplay();
+
+        // Scroll to phase indicator so it sits at the top of the viewport
+        this.phaseIndicator.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
         this.lastTickTime = Date.now();
         this.intervalId = setInterval(() => this.tick(), 100);
 
