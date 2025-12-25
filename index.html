@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Norwegian 4x4 Timer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Norwegian 4x4</h1>
+            <p class="subtitle">Interval Training Timer</p>
+        </header>
+
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="panel">
+            <button id="start-btn" class="btn-primary">Start Workout</button>
+
+            <h2>Settings</h2>
+
+            <div class="setting-group">
+                <label for="warmup-duration">Warmup Duration</label>
+                <div class="duration-input">
+                    <button class="btn-adjust" data-target="warmup-duration" data-delta="-0.5">-</button>
+                    <select id="warmup-duration">
+                        <option value="0">0 min</option>
+                        <option value="1">1 min</option>
+                        <option value="2">2 min</option>
+                        <option value="3">3 min</option>
+                        <option value="4">4 min</option>
+                        <option value="5" selected>5 min</option>
+                        <option value="6">6 min</option>
+                        <option value="7">7 min</option>
+                        <option value="8">8 min</option>
+                        <option value="9">9 min</option>
+                        <option value="10">10 min</option>
+                    </select>
+                    <button class="btn-adjust" data-target="warmup-duration" data-delta="0.5">+</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label for="high-intensity-duration">High Intensity (Run)</label>
+                <div class="duration-input">
+                    <button class="btn-adjust" data-target="high-intensity-duration" data-delta="-0.5">-</button>
+                    <select id="high-intensity-duration">
+                        <option value="1">1 min</option>
+                        <option value="2">2 min</option>
+                        <option value="3">3 min</option>
+                        <option value="4" selected>4 min</option>
+                        <option value="5">5 min</option>
+                        <option value="6">6 min</option>
+                        <option value="7">7 min</option>
+                        <option value="8">8 min</option>
+                        <option value="9">9 min</option>
+                        <option value="10">10 min</option>
+                    </select>
+                    <button class="btn-adjust" data-target="high-intensity-duration" data-delta="0.5">+</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label for="recovery-duration">Recovery (Walk)</label>
+                <div class="duration-input">
+                    <button class="btn-adjust" data-target="recovery-duration" data-delta="-0.5">-</button>
+                    <select id="recovery-duration">
+                        <option value="1">1 min</option>
+                        <option value="2">2 min</option>
+                        <option value="3" selected>3 min</option>
+                        <option value="4">4 min</option>
+                        <option value="5">5 min</option>
+                        <option value="6">6 min</option>
+                        <option value="7">7 min</option>
+                        <option value="8">8 min</option>
+                        <option value="9">9 min</option>
+                        <option value="10">10 min</option>
+                    </select>
+                    <button class="btn-adjust" data-target="recovery-duration" data-delta="0.5">+</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label for="cooldown-duration">Cooldown Duration</label>
+                <div class="duration-input">
+                    <button class="btn-adjust" data-target="cooldown-duration" data-delta="-0.5">-</button>
+                    <select id="cooldown-duration">
+                        <option value="0">0 min</option>
+                        <option value="1">1 min</option>
+                        <option value="2">2 min</option>
+                        <option value="3">3 min</option>
+                        <option value="4">4 min</option>
+                        <option value="5" selected>5 min</option>
+                        <option value="6">6 min</option>
+                        <option value="7">7 min</option>
+                        <option value="8">8 min</option>
+                        <option value="9">9 min</option>
+                        <option value="10">10 min</option>
+                    </select>
+                    <button class="btn-adjust" data-target="cooldown-duration" data-delta="0.5">+</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label for="intervals">Number of Intervals</label>
+                <div class="duration-input">
+                    <button class="btn-adjust" data-target="intervals" data-delta="-1">-</button>
+                    <select id="intervals">
+                        <option value="1">1x</option>
+                        <option value="2">2x</option>
+                        <option value="3">3x</option>
+                        <option value="4" selected>4x</option>
+                        <option value="5">5x</option>
+                        <option value="6">6x</option>
+                        <option value="7">7x</option>
+                        <option value="8">8x</option>
+                    </select>
+                    <button class="btn-adjust" data-target="intervals" data-delta="1">+</button>
+                </div>
+            </div>
+
+            <div class="total-time">
+                <span>Total workout time: </span>
+                <span id="total-time">38:00</span>
+            </div>
+        </div>
+
+        <!-- Timer Panel -->
+        <div id="timer-panel" class="panel hidden">
+            <div id="phase-indicator" class="phase-indicator warmup">
+                <span id="phase-name">WARMUP</span>
+                <span id="interval-counter" class="interval-counter"></span>
+            </div>
+
+            <div class="timer-display">
+                <div id="phase-time" class="time-main">05:00</div>
+                <div class="time-label">Phase Time</div>
+            </div>
+
+            <div class="progress-container">
+                <div id="phase-progress" class="progress-bar"></div>
+            </div>
+
+            <div class="timer-secondary">
+                <div class="secondary-item">
+                    <span id="total-elapsed">00:00</span>
+                    <span class="label">Elapsed</span>
+                </div>
+                <div class="secondary-item">
+                    <span id="total-remaining">38:00</span>
+                    <span class="label">Remaining</span>
+                </div>
+            </div>
+
+            <div id="next-phase" class="next-phase">
+                Next: High Intensity (Run)
+            </div>
+
+            <div class="controls">
+                <button id="pause-btn" class="btn-control">
+                    <span class="icon">⏸</span>
+                    <span>Pause</span>
+                </button>
+                <button id="stop-btn" class="btn-control btn-stop">
+                    <span class="icon">⏹</span>
+                    <span>Stop</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Completion Panel -->
+        <div id="complete-panel" class="panel hidden">
+            <div class="complete-icon">🎉</div>
+            <h2>Workout Complete!</h2>
+            <p class="complete-stats">
+                Total time: <span id="final-time">38:00</span>
+            </p>
+            <button id="restart-btn" class="btn-primary">Start New Workout</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
