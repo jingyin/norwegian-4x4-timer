@@ -245,7 +245,7 @@ class Timer {
         document.querySelectorAll('.btn-adjust').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetId = e.currentTarget.dataset.target;
-                const delta = parseInt(e.currentTarget.dataset.delta);
+                const delta = parseFloat(e.currentTarget.dataset.delta);
                 this.adjustValue(targetId, delta);
             });
         });
