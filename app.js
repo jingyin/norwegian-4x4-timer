@@ -142,13 +142,17 @@ class Timer {
 
         this.phases = [];
         this.currentPhaseIndex = 0;
-        this.phaseTimeRemaining = 0;
-        this.totalElapsed = 0;
         this.totalDuration = 0;
         this.isRunning = false;
         this.isPaused = false;
         this.intervalId = null;
-        this.lastTickTime = null;
+
+        // Wall-clock based timing
+        this.workoutStartTime = null;      // When workout started (Date.now())
+        this.phaseStartTime = null;        // When current phase started
+        this.totalPausedMs = 0;            // Total milliseconds spent paused
+        this.pauseStartTime = null;        // When current pause started
+        this.phaseElapsedBeforePause = 0;  // Phase time elapsed before pause
 
         this.audio = new AudioManager();
         this.countdownStarted = false;
@@ -255,13 +259,6 @@ class Timer {
             });
         });
 
-        // Prevent screen from sleeping during workout (where supported)
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && this.isRunning && !this.isPaused) {
-                // Resync timer when app becomes visible
-                this.lastTickTime = Date.now();
-            }
-        });
     }
 
     adjustValue(targetId, delta) {
@@ -357,11 +354,17 @@ class Timer {
         }
 
         this.currentPhaseIndex = 0;
-        this.phaseTimeRemaining = this.phases[0].duration;
-        this.totalElapsed = 0;
         this.isRunning = true;
         this.isPaused = false;
         this.countdownStarted = false;
+
+        // Initialize wall-clock timing
+        const now = Date.now();
+        this.workoutStartTime = now;
+        this.phaseStartTime = now;
+        this.totalPausedMs = 0;
+        this.pauseStartTime = null;
+        this.phaseElapsedBeforePause = 0;
 
         this.showPanel('timer');
         this.updateDisplay();
@@ -369,7 +372,6 @@ class Timer {
         // Scroll to phase indicator so it sits at the top of the viewport
         this.phaseIndicator.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-        this.lastTickTime = Date.now();
         this.intervalId = setInterval(() => this.tick(), 100);
 
         // Request wake lock if available
@@ -397,25 +399,26 @@ class Timer {
         if (!this.isRunning || this.isPaused) return;
 
         const now = Date.now();
-        const delta = (now - this.lastTickTime) / 1000;
-        this.lastTickTime = now;
+        const currentPhase = this.phases[this.currentPhaseIndex];
 
-        this.phaseTimeRemaining -= delta;
-        this.totalElapsed += delta;
+        // Calculate phase elapsed time from wall clock
+        const phaseElapsedMs = (now - this.phaseStartTime) + (this.phaseElapsedBeforePause * 1000);
+        const phaseElapsedSecs = phaseElapsedMs / 1000;
+        const phaseTimeRemaining = currentPhase.duration - phaseElapsedSecs;
 
         // Check for audio cues
-        this.checkAudioCues();
+        this.checkAudioCues(phaseTimeRemaining);
 
         // Check if phase is complete
-        if (this.phaseTimeRemaining <= 0) {
+        if (phaseTimeRemaining <= 0) {
             this.nextPhase();
         }
 
         this.updateDisplay();
     }
 
-    checkAudioCues() {
-        const timeRemaining = Math.ceil(this.phaseTimeRemaining);
+    checkAudioCues(phaseTimeRemaining) {
+        const timeRemaining = Math.ceil(phaseTimeRemaining);
 
         // Start countdown ticks at 10 seconds
         if (timeRemaining <= 10 && timeRemaining > 0) {
@@ -441,21 +444,35 @@ class Timer {
             return;
         }
 
+        // Reset phase timing for new phase
+        this.phaseStartTime = Date.now();
+        this.phaseElapsedBeforePause = 0;
+
         const newPhase = this.phases[this.currentPhaseIndex];
-        this.phaseTimeRemaining = newPhase.duration;
 
         // Play phase change sound
         this.audio.playPhaseChange(newPhase.isHighIntensity);
     }
 
     togglePause() {
-        this.isPaused = !this.isPaused;
+        const now = Date.now();
 
-        if (this.isPaused) {
+        if (!this.isPaused) {
+            // Pausing: record when pause started and how much phase time elapsed
+            this.isPaused = true;
+            this.pauseStartTime = now;
+            // Store phase elapsed time before pause
+            this.phaseElapsedBeforePause += (now - this.phaseStartTime) / 1000;
             this.pauseBtn.innerHTML = '<span class="icon">▶</span><span>Resume</span>';
         } else {
+            // Resuming: add paused duration to total and reset phase start
+            this.isPaused = false;
+            const pausedDuration = now - this.pauseStartTime;
+            this.totalPausedMs += pausedDuration;
+            // Reset phase start to now (elapsed time is stored in phaseElapsedBeforePause)
+            this.phaseStartTime = now;
+            this.pauseStartTime = null;
             this.pauseBtn.innerHTML = '<span class="icon">⏸</span><span>Pause</span>';
-            this.lastTickTime = Date.now();
         }
     }
 
@@ -467,8 +484,13 @@ class Timer {
     }
 
     complete() {
+        // Calculate final elapsed time from wall clock
+        const now = Date.now();
+        const totalElapsedMs = now - this.workoutStartTime - this.totalPausedMs;
+        const totalElapsed = totalElapsedMs / 1000;
+
         this.cleanup();
-        this.finalTimeDisplay.textContent = this.formatTime(this.totalElapsed);
+        this.finalTimeDisplay.textContent = this.formatTime(totalElapsed);
         this.audio.playComplete();
         this.showPanel('complete');
     }
@@ -507,6 +529,27 @@ class Timer {
 
     updateDisplay() {
         const currentPhase = this.phases[this.currentPhaseIndex];
+        const now = Date.now();
+
+        // Calculate phase time from wall clock
+        let phaseElapsedSecs;
+        if (this.isPaused) {
+            // When paused, use the stored elapsed time
+            phaseElapsedSecs = this.phaseElapsedBeforePause;
+        } else {
+            // When running, calculate from phase start plus any stored time
+            phaseElapsedSecs = ((now - this.phaseStartTime) / 1000) + this.phaseElapsedBeforePause;
+        }
+        const phaseTimeRemaining = Math.max(0, currentPhase.duration - phaseElapsedSecs);
+
+        // Calculate total elapsed from wall clock (excluding paused time)
+        let totalElapsedMs;
+        if (this.isPaused) {
+            totalElapsedMs = this.pauseStartTime - this.workoutStartTime - this.totalPausedMs;
+        } else {
+            totalElapsedMs = now - this.workoutStartTime - this.totalPausedMs;
+        }
+        const totalElapsed = totalElapsedMs / 1000;
 
         // Update phase indicator
         this.phaseIndicator.className = `phase-indicator ${currentPhase.type}`;
@@ -520,16 +563,16 @@ class Timer {
         }
 
         // Update phase time
-        this.phaseTimeDisplay.textContent = this.formatTime(Math.max(0, this.phaseTimeRemaining));
+        this.phaseTimeDisplay.textContent = this.formatTime(phaseTimeRemaining);
 
         // Update progress bar
-        const progress = ((currentPhase.duration - this.phaseTimeRemaining) / currentPhase.duration) * 100;
+        const progress = (phaseElapsedSecs / currentPhase.duration) * 100;
         this.phaseProgress.style.width = `${Math.min(100, progress)}%`;
         this.phaseProgress.style.backgroundColor = this.getPhaseColor(currentPhase.type);
 
         // Update total times
-        this.totalElapsedDisplay.textContent = this.formatTime(this.totalElapsed);
-        this.totalRemainingDisplay.textContent = this.formatTime(Math.max(0, this.totalDuration - this.totalElapsed));
+        this.totalElapsedDisplay.textContent = this.formatTime(totalElapsed);
+        this.totalRemainingDisplay.textContent = this.formatTime(Math.max(0, this.totalDuration - totalElapsed));
 
         // Update next phase
         if (this.currentPhaseIndex < this.phases.length - 1) {
